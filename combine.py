@@ -27,7 +27,11 @@ def get_form(ngram, allow_pos=None, disallow_pos=None):
     """ Note: allow_pos matches POS forms from allforms (n, v, adj, etc) but
     disallow_pos matches POS forms from NGRAMs (VERB, NOUN, ., etc) """
     word, _, pos = ngram.rpartition("_")
-    if not word or not word.isalpha() or (args.min_len and len(word) < args.min_len):
+    if not word:
+        word = pos
+        pos = ""
+
+    if not word.isalpha() or (args.min_len and len(word) < args.min_len):
         return
 
     if pos:
@@ -49,17 +53,25 @@ def get_form(ngram, allow_pos=None, disallow_pos=None):
 
 def read_summary(filename):
     print(f"reading {filename}", file=sys.stderr)
-    with open(filename, "rt") as infile:
-        for line in infile:
-            ngram, _, count = line.partition("\t")
-            res = get_form(ngram, allow_pos=args.pos, disallow_pos=["."])
-            if not res:
-                continue
-            form, pos, known = res
-            if not known and not args.allow_unknown:
-                continue
-            if form:
-                yield form, pos, int(count), known
+
+    if filename == "-":
+        infile = sys.stdin
+    else:
+        infile = open(filename, "rt")
+
+    for line in infile:
+        ngram, _, count = line.partition("\t")
+        res = get_form(ngram, allow_pos=args.pos, disallow_pos=["."])
+        if not res:
+            continue
+        form, pos, known = res
+        if not known and not args.allow_unknown:
+            continue
+        if form:
+            yield form, pos, int(count), known
+
+    if filename != "-":
+        infile.close()
 
 def print_formdata(form, formdata, is_known):
     poscount = []
@@ -92,4 +104,5 @@ for form, pos, count, known in sorted(data):
         prev_known = known
     formdata[pos] += count
 
-print_formdata(prev_form, formdata, prev_known)
+if prev_form:
+    print_formdata(prev_form, formdata, prev_known)
