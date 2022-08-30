@@ -32,8 +32,8 @@ def summarize_line(line, min_year=0, max_year=0):
         if max_year and int(year_item[:4]) > max_year:
             break
 
-        year, sources, count = year_item.split(",")
-        total += int(count)
+        year, use_count, source_count = year_item.split(",")
+        total += int(use_count)
 
     return items[0], total
 
