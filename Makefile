@@ -21,9 +21,9 @@ year := 1950
 
 spa-1-all := $(foreach var,$(shell seq -f "%05g" 0    2),spa/1-$(var)-of-00003-$(year).bz2)
 spa-2-all := $(foreach var,$(shell seq -f "%05g" 0   72),spa/2-$(var)-of-00073-$(year).bz2)
-spa-3-all := $(foreach var,$(shell seq -f "%05g" 0  687),spa/3-$(var)-of-00688-$(year).bz2)
-spa-4-all := $(foreach var,$(shell seq -f "%05g" 0  570),spa/4-$(var)-of-00571-$(year).bz2)
-spa-5-all := $(foreach var,$(shell seq -f "%05g" 0 1414),spa/5-$(var)-of-01415-$(year).bz2)
+spa-3-all := $(foreach var,$(shell seq -f "%05g" 45 130),spa/3-$(var)-of-00688-$(year).bz2) $(foreach var,$(shell seq -f "%05g" 239  687),spa/3-$(var)-of-00688-$(year).bz2)
+spa-4-all := $(foreach var,$(shell seq -f "%05g" 33  80),spa/4-$(var)-of-00571-$(year).bz2) $(foreach var,$(shell seq -f "%05g" 262  570),spa/4-$(var)-of-00571-$(year).bz2)
+spa-5-all := $(foreach var,$(shell seq -f "%05g" 78 162),spa/5-$(var)-of-01415-$(year).bz2) $(foreach var,$(shell seq -f "%05g" 771 1414),spa/5-$(var)-of-01415-$(year).bz2)
 
 %-$(year).bz2:
 >   @echo "Making $@..."
@@ -35,11 +35,19 @@ spa-5-all := $(foreach var,$(shell seq -f "%05g" 0 1414),spa/5-$(var)-of-01415-$
 
 spa-%: $$(spa-$$*-all)
 
+spa/1-$(year).ngram.full: $$(spa-1-all)
+>   @echo "Making $@..."
+>   bzcat $^ | sort -k2,2nr -k1,1 > $@
+
 spa/%-$(year).ngram: $$(spa-$$*-all)
 >   @echo "Making $@..."
-
 >   mkdir -p $(@D)
->   bzcat $^ | sort -k2,2nr -k1,1 > $@
+>   bzcat $^ | grep -P "^[ A-ZÁÉÍÑÓÚÜa-záéíñóúü.]+\t" | grep -v -E "(^|\s)\.+\s" > $@
+>   sort -k2,2nr -k1,1 -o $@ $@
+
+spa/%-$(year).ngram.bz2: spa/%-$(year).ngram
+>   @echo "Making $@..."
+>   bzip2 $<
 
 # Build all .coord files at the same time
 $(subst .bz2,.coord,$(spa-2-all)) &: spa/1-1950.ngram $(spa-2-all)
@@ -51,6 +59,10 @@ $(subst .bz2,.coord,$(spa-3-all)) &: spa/1-1950.ngram $(spa-3-all)
 >   $(MAKE_COORDS) --ngram1 $^
 
 $(subst .bz2,.coord,$(spa-4-all)) &: spa/1-1950.ngram $(spa-4-all)
+>   @echo "Making $@... $^"
+>   $(MAKE_COORDS) --ngram1 $^
+
+$(subst .bz2,.coord,$(spa-5-all)) &: spa/1-1950.ngram $(spa-5-all)
 >   @echo "Making $@... $^"
 >   $(MAKE_COORDS) --ngram1 $^
 
