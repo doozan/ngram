@@ -59,27 +59,9 @@ spa/%.ngram.bz2: spa/%.ngram
 >   bzip2 -f $<
 
 
-
-# Build all .coord files at the same time
-$(subst .bz2,-filtered-$(year).coord,$(spa-2-all)) &: spa/1-filtered-$(year).ngram $(subst .bz2,-filtered-$(year).bz2,$(spa-2-all))
+spa/%-filtered-$(year).coord: spa/1-filtered-$(year).ngram spa/%-filtered-$(year).ngram.bz2
 >   @echo "Making $@..."
->   $(MAKE_COORDS) --ngram1 $^
-
-$(subst .bz2,-filtered-$(year).coord,$(spa-3-all)) &: spa/1-filtered-$(year).ngram $(subst .bz2,-filtered-$(year).bz2,$(spa-3-all))
->   @echo "Making $@... $^"
->   $(MAKE_COORDS) --ngram1 $^
-
-$(subst .bz2,-filtered-$(year).coord,$(spa-4-all)) &: spa/1-filtered-$(year).ngram $(subst .bz2,-filtered-$(year).bz2,$(spa-4-all))
->   @echo "Making $@... $^"
->   $(MAKE_COORDS) --ngram1 $^
-
-$(subst .bz2,-filtered-$(year).coord,$(spa-5-all)) &: spa/1-filtered-$(year).ngram $(subst .bz2,-filtered-$(year).bz2,$(spa-5-all))
->   @echo "Making $@... $^"
->   $(MAKE_COORDS) --ngram1 $^
-
-spa/%-filtered-$(year).coord: $$(subst .bz2,-filtered-$(year).coord,$$(spa-$$(*)-all))
->   @echo "Making $@..."
->   cat $^ | sort -u > $@
+>   $(MAKE_COORDS) --ngram1 $^ > $@
 
 
 all_ngrams: spa/1-full-$(year).ngram spa/1-filtered-$(year).ngram spa/2-filtered-$(year).ngram.bz2 spa/3-filtered-$(year).ngram.bz2 spa/5-filtered-$(year).ngram.bz2 spa/5-filtered-$(year).ngram.bz2
