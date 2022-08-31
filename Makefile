@@ -26,12 +26,12 @@ spa-5-all := $(foreach var,$(shell seq -f "%05g" 78 162),spa/5-$(var)-of-01415.b
 %-filtered.bz2:
 >   @echo "Making $@..."
 >   URL=http://storage.googleapis.com/books/ngrams/books/20200217/$*.gz
->   curl -s $$URL | gunzip | ( grep -P "^[ A-ZÁÉÍÑÓÚÜa-záéíñóúü.]+\t" || [[ $$? == 1 ]] ) | bzip2  > $@
+>   curl --retry 5 -s $$URL | gunzip | ( grep -P "^[ A-ZÁÉÍÑÓÚÜa-záéíñóúü.]+\t" || [[ $$? == 1 ]] ) | bzip2  > $@
 
 %-full.bz2:
 >   @echo "Making $@..."
 >   URL=http://storage.googleapis.com/books/ngrams/books/20200217/$*.gz
->   curl -s $$URL | gunzip | bzip2  > $@
+>   curl --retry 5 -s $$URL | gunzip | bzip2  > $@
 
 year := 1950
 spa/%-filtered-$(year).bz2: spa/%-filtered.bz2
@@ -44,10 +44,6 @@ spa/%-full-$(year).bz2: spa/%-full.bz2
 
 .SECONDEXPANSION:
 
-spa-%-filtered: $$(subst .bz2,-filtered.bz2,$$(spa-$$(*)-all))
->   @echo "Making $@..."
-
-#spa/%-full-$(year).ngram: $$(subst .bz2,-full-$(year).bz2,$$(spa-$$(*)-all))
 spa/1-full-$(year).ngram: $$(subst .bz2,-full-$(year).bz2,$$(spa-1-all))
 >   @echo "Making $@..."
 >   bzcat $^ | sort -k2,2nr -k1,1 > $@
@@ -60,7 +56,9 @@ spa/%-filtered-$(year).ngram: $$(subst .bz2,-filtered-$(year).bz2,$$(spa-$$(*)-a
 
 spa/%.ngram.bz2: spa/%.ngram
 >   @echo "Making $@..."
->   bzip2 $<
+>   bzip2 -f $<
+
+
 
 # Build all .coord files at the same time
 $(subst .bz2,-filtered-$(year).coord,$(spa-2-all)) &: spa/1-filtered-$(year).ngram $(subst .bz2,-filtered-$(year).bz2,$(spa-2-all))
@@ -83,4 +81,9 @@ spa/%-filtered-$(year).coord: $$(subst .bz2,-filtered-$(year).coord,$$(spa-$$(*)
 >   @echo "Making $@..."
 >   cat $^ | sort -u > $@
 
-.PHONY: spa-1-filtered spa-2-filtered spa-3-filtered spa-4-filtered spa-5-filtered
+
+all_ngrams: spa/1-full-$(year).ngram spa/1-filtered-$(year).ngram spa/2-filtered-$(year).ngram.bz2 spa/3-filtered-$(year).ngram.bz2 spa/5-filtered-$(year).ngram.bz2 spa/5-filtered-$(year).ngram.bz2
+all_coords: spa/2-filtered-$(year).coord spa/3-filtered-$(year).coord spa/5-filtered-$(year).coord spa/5-filtered-$(year).coord
+all: all_ngrams all_coords
+
+.PHONY: all all_ngrams all_coords
