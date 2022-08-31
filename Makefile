@@ -58,14 +58,12 @@ spa/%.ngram.bz2: spa/%.ngram
 >   @echo "Making $@..."
 >   bzip2 -f $<
 
-
 spa/%-filtered-$(year).coord: spa/1-filtered-$(year).ngram spa/%-filtered-$(year).ngram.bz2
 >   @echo "Making $@..."
 >   $(MAKE_COORDS) --ngram1 $^ > $@
 
-
-all_ngrams: spa/1-full-$(year).ngram spa/1-filtered-$(year).ngram spa/2-filtered-$(year).ngram.bz2 spa/3-filtered-$(year).ngram.bz2 spa/5-filtered-$(year).ngram.bz2 spa/5-filtered-$(year).ngram.bz2
-all_coords: spa/2-filtered-$(year).coord spa/3-filtered-$(year).coord spa/5-filtered-$(year).coord spa/5-filtered-$(year).coord
+all_ngrams: spa/1-full-$(year).ngram spa/1-filtered-$(year).ngram $(patsubst %, spa/%-filtered-$(year).ngram.bz2,2 3 4 5)
+all_coords: $(patsubst %, spa/%-filtered-$(year).coord,2 3 4 5)
 all: all_ngrams all_coords
 
 .PHONY: all all_ngrams all_coords
