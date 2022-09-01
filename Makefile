@@ -18,10 +18,10 @@ SUMMARIZE := ./summarize.py
 MAKE_COORDS := ./make_coords.py
 
 spa-1-all := $(foreach var,$(shell seq -f "%05g" 0    2),spa/1-$(var)-of-00003.bz2)
-spa-2-all := $(foreach var,$(shell seq -f "%05g" 0   72),spa/2-$(var)-of-00073.bz2)
-spa-3-all := $(foreach var,$(shell seq -f "%05g" 45 130),spa/3-$(var)-of-00688.bz2) $(foreach var,$(shell seq -f "%05g" 239  687),spa/3-$(var)-of-00688.bz2)
-spa-4-all := $(foreach var,$(shell seq -f "%05g" 33  80),spa/4-$(var)-of-00571.bz2) $(foreach var,$(shell seq -f "%05g" 262  570),spa/4-$(var)-of-00571.bz2)
-spa-5-all := $(foreach var,$(shell seq -f "%05g" 78 162),spa/5-$(var)-of-01415.bz2) $(foreach var,$(shell seq -f "%05g" 771 1414),spa/5-$(var)-of-01415.bz2)
+spa-2-all := $(foreach var,$(shell seq -f "%05g" 2   21),spa/2-$(var)-of-00073.bz2) $(foreach var,$(shell seq -f "%05g" 26   72),spa/2-$(var)-of-00073.bz2)
+spa-3-all := $(foreach var,$(shell seq -f "%05g" 45 129),spa/3-$(var)-of-00688.bz2) $(foreach var,$(shell seq -f "%05g" 239  687),spa/3-$(var)-of-00688.bz2)
+spa-4-all := $(foreach var,$(shell seq -f "%05g" 33  79),spa/4-$(var)-of-00571.bz2) $(foreach var,$(shell seq -f "%05g" 262  570),spa/4-$(var)-of-00571.bz2)
+spa-5-all := $(foreach var,$(shell seq -f "%05g" 77 161),spa/5-$(var)-of-01415.bz2) $(foreach var,$(shell seq -f "%05g" 771 1414),spa/5-$(var)-of-01415.bz2)
 
 %-filtered.bz2:
 >   @echo "Making $@..."
