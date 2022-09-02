@@ -28,8 +28,9 @@ def get_form(ngram, allow_pos=None, disallow_pos=None):
     disallow_pos matches POS forms from NGRAMs (VERB, NOUN, ., etc) """
     word, _, pos = ngram.rpartition("_")
     if not word:
-        word = pos
-        pos = ""
+        # word will be null if ngram is "word" and not "word_pos"
+        # we want to ignore any counts that don't have a pos
+        return
 
     if not word.isalpha() or (args.min_len and len(word) < args.min_len):
         return
