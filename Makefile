@@ -62,6 +62,24 @@ spa/%-filtered-$(year).coord: spa/1-filtered-$(year).ngram spa/%-filtered-$(year
 >   @echo "Making $@..."
 >   $(MAKE_COORDS) --ngram1 $^ > $@
 
+spa/ngram.db: $(patsubst %,spa/%-filtered-1950.ngram.bz2,2 3 4 5)
+>   @echo "Making $@..."
+>   cat <<EOF > load.sql
+>   PRAGMA journal_mode = OFF;
+>   PRAGMA synchronous = 0;
+>   PRAGMA cache_size = 1000000;
+>   PRAGMA locking_mode = EXCLUSIVE;
+>   PRAGMA temp_store = MEMORY;
+>   CREATE TABLE ngram(phrase text PRIMARY KEY NOT NULL, count INT NOT NULL);
+>   .mode csv
+>   .separator "\t"
+>   .timer on
+>   .import /dev/stdin ngram
+>   EOF
+>
+>   $(RM) $@
+>   bzcat $^ | sqlite3 --init load.sql $@
+
 all_ngrams: spa/1-full-$(year).ngram spa/1-filtered-$(year).ngram $(patsubst %, spa/%-filtered-$(year).ngram.bz2,2 3 4 5)
 all_coords: $(patsubst %, spa/%-filtered-$(year).coord,2 3 4 5)
 all: all_ngrams all_coords
