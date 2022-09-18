@@ -7,8 +7,6 @@ import sys
 from collections import defaultdict
 from enwiktionary_wordlist.all_forms import AllForms
 
-NGRAM_MAX=5
-
 def case_matches(target, match):
     # Returns True if all capitalized words in target exactly match the correspanding match words
     # if a word in target is all lowercase, the case of match doesn't matter
@@ -33,18 +31,18 @@ def case_matches(target, match):
     return True
 
 
-def get_segments(words):
+def get_segments(words, ngram_max=5):
 
     # Get offsets of all possible 5-word segments from a list of words
-    # If words <= NGRAM_MAX, returns a list containing only one offset
+    # If words <= ngram_max, returns a list containing only one offset
     # returns [(0, 5), (1, 6), ...]
 
     segments = []
-    if len(words) <= NGRAM_MAX:
+    if len(words) <= ngram_max:
         segments.append((0, len(words)))
     else:
-        for x in range(len(words)-NGRAM_MAX+1):
-            segments.append((x, x+NGRAM_MAX))
+        for x in range(len(words)-ngram_max+1):
+            segments.append((x, x+ngram_max))
 
     return segments
 
@@ -164,6 +162,25 @@ def get_lemma_counts(allforms, search_results, search_targets):
 
     return lemma_counts
 
+
+def adjust_embedded(lemma_counts):
+
+    embedded = defaultdict(list)
+
+    for lemma in sorted(lemma_counts, key=lambda x: len(x.split())*-1):
+        for bigger_lemma in embedded.get(lemma, []):
+            bigger_count = lemma_counts[bigger_lemma].count
+            lemma_counts[lemma].count -= bigger_count
+            lemma_counts[lemma].ngrams.append((bigger_lemma, bigger_count*-1))
+            if lemma_counts[lemma].count < 0:
+                raise ValueError("less that zero", lemma, bigger_lemma)
+
+        lemma_words = tuple(lemma.split())
+        for size in [2,3,4,5]:
+            for start, end in get_segments(lemma_words, size):
+                lemma_segment = " ".join(lemma_words[start:end])
+                embedded[lemma_segment].append(lemma)
+
 def print_lemma_totals(lemma_counts):
 
     for lemma, lemma_count in sorted(lemma_counts.items(), key=lambda x: x[1].count*-1):
@@ -182,6 +199,7 @@ def main():
     parser = argparse.ArgumentParser(description="Summarize ngram usage")
     parser.add_argument("--allforms", required=True)
     parser.add_argument("--ngramdb")
+    parser.add_argument("--adjust-embedded", action='store_true')
     parser.add_argument("ngram", nargs="*")
     args = parser.parse_args()
 
@@ -198,6 +216,10 @@ def main():
     search_results = search_corpus(generator, search_targets)
 
     lemma_counts = get_lemma_counts(allforms, search_results, search_targets)
+
+    if args.adjust_embedded:
+        adjust_embedded(lemma_counts)
+
     print_lemma_totals(lemma_counts)
 
 if __name__ == "__main__":
