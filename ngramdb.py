@@ -28,7 +28,7 @@ class NgramDB():
 
         size = len(form_words)
         count = 0
-        if size < 5:
+        if size <= 5:
             return self._get_count(form)
 
         for offset in range(size-5+1):
