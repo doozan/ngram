@@ -34,7 +34,7 @@ class NgramDB():
         for offset in range(size-5+1):
             section = " ".join(form_words[offset:offset+5])
 
-            section_count = self._get_count(" ".join(form))
+            section_count = self._get_count(section)
 
             if offset == 0 or section_count < count:
                 count = section_count
