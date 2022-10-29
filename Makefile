@@ -16,6 +16,7 @@ endif
 
 SUMMARIZE := ./summarize.py
 MAKE_COORDS := ./make_coords.py
+MAKE_NGCASE := ./make_ngcase.py
 
 spa-1-all := $(foreach var,$(shell seq -f "%05g" 0    2),spa/1-$(var)-of-00003.bz2)
 spa-2-all := $(foreach var,$(shell seq -f "%05g" 2   21),spa/2-$(var)-of-00073.bz2) $(foreach var,$(shell seq -f "%05g" 26   72),spa/2-$(var)-of-00073.bz2)
@@ -33,22 +34,25 @@ spa-5-all := $(foreach var,$(shell seq -f "%05g" 77 161),spa/5-$(var)-of-01415.b
 >   URL=http://storage.googleapis.com/books/ngrams/books/20200217/$*.gz
 >   curl --retry 5 -s $$URL | gunzip | bzip2  > $@
 
-year := 1950
-spa/%-filtered-$(year).bz2: spa/%-filtered.bz2
+YEAR := 1950
+#YEAR := 2012
+spa/%-filtered-$(YEAR).bz2: spa/%-filtered.bz2
 >   @echo "Making $@..."
->   $(SUMMARIZE) $< --min-year $(year) -o $@
+>   $(SUMMARIZE) $< --min-YEAR $(YEAR) -o $@
+#>   $(SUMMARIZE) $< --min-YEAR $(YEAR) -o $@ --normalize
 
-spa/%-full-$(year).bz2: spa/%-full.bz2
+spa/%-full-$(YEAR).bz2: spa/%-full.bz2
 >   @echo "Making $@..."
->   $(SUMMARIZE) $< --min-year $(year) -o $@
+#>   $(SUMMARIZE) $< --min-YEAR $(YEAR) -o $@ --normalize
+>   $(SUMMARIZE) $< --min-YEAR $(YEAR) -o $@
 
 .SECONDEXPANSION:
 
-spa/1-full-$(year).ngram: $$(subst .bz2,-full-$(year).bz2,$$(spa-1-all))
+spa/1-full-$(YEAR).ngram: $$(subst .bz2,-full-$(YEAR).bz2,$$(spa-1-all))
 >   @echo "Making $@..."
 >   bzcat $^ | sort -k2,2nr -k1,1 > $@
 
-spa/%-filtered-$(year).ngram: $$(subst .bz2,-filtered-$(year).bz2,$$(spa-$$(*)-all))
+spa/%-filtered-$(YEAR).ngram: $$(subst .bz2,-filtered-$(YEAR).bz2,$$(spa-$$(*)-all))
 >   @echo "Making $@..."
 >   mkdir -p $(@D)
 >   bzcat $^ | grep -P "^[ A-ZÁÉÍÑÓÚÜa-záéíñóúü.]+\t" | grep -v -E "(^|\s)\.+\s" > $@
@@ -58,11 +62,11 @@ spa/%.ngram.bz2: spa/%.ngram
 >   @echo "Making $@..."
 >   bzip2 -f $<
 
-spa/%-filtered-$(year).coord: spa/1-filtered-$(year).ngram spa/%-filtered-$(year).ngram.bz2
+spa/%-filtered-$(YEAR).coord: spa/1-filtered-$(YEAR).ngram spa/%-filtered-$(YEAR).ngram.bz2
 >   @echo "Making $@..."
 >   $(MAKE_COORDS) --ngram1 $^ > $@
 
-spa/ngram.db: $(patsubst %,spa/%-filtered-1950.ngram.bz2,2 3 4 5)
+spa/ngram-$(YEAR).db: $(patsubst %,spa/%-filtered-$(YEAR).ngram.bz2,2 3 4 5)
 >   @echo "Making $@..."
 >   cat <<EOF > load.sql
 >   PRAGMA journal_mode = OFF;
@@ -80,8 +84,13 @@ spa/ngram.db: $(patsubst %,spa/%-filtered-1950.ngram.bz2,2 3 4 5)
 >   $(RM) $@
 >   bzcat $^ | sqlite3 --init load.sql $@
 
-all_ngrams: spa/1-full-$(year).ngram spa/1-filtered-$(year).ngram $(patsubst %, spa/%-filtered-$(year).ngram.bz2,2 3 4 5)
-all_coords: $(patsubst %, spa/%-filtered-$(year).coord,2 3 4 5)
+spa/es-1-$(YEAR).ngcase: spa/2-filtered-$(YEAR).ngram.bz2
+>   @echo "Making $@..."
+
+>   $(MAKE_NGCASE) $^ --min 1000 > $@
+
+all_ngrams: spa/1-full-$(YEAR).ngram spa/1-filtered-$(YEAR).ngram $(patsubst %, spa/%-filtered-$(YEAR).ngram.bz2,2 3 4 5)
+all_coords: $(patsubst %, spa/%-filtered-$(YEAR).coord,2 3 4 5)
 all: all_ngrams all_coords
 
 .PHONY: all all_ngrams all_coords
