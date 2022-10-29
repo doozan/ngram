@@ -7,11 +7,14 @@ import sys
 from collections import defaultdict
 from enwiktionary_wordlist.all_forms import AllForms
 
+def strip_form(form):
+    return form.replace(".", "").replace(",", "").replace("¿", "").replace("?", "")
+
 def case_matches(target, match):
     # Returns True if all capitalized words in target exactly match the correspanding match words
     # if a word in target is all lowercase, the case of match doesn't matter
 
-    stripped_target = target.replace(",", "").replace("¿", "").replace("?", "")
+    stripped_target = strip_form(target)
 
     target_words = stripped_target.split()
     match_words = match.split()
@@ -77,27 +80,28 @@ def get_count_matches(search_phrase, search_targets, search_results):
 def iter_form_lemmas(allforms):
 
     for form, pos, lemma in allforms.all:
-        if not lemma.count(" ") or lemma.count(" ") != form.count(" "):
+        #if not lemma.count(" ") or lemma.count(" ") != form.count(" "):
+        if not lemma.count(" ") or not form.count(" "):
             continue
 
         # skip drae forms with notes
-        if "[" in lemma:
+        if "[" in form:
             continue
 
         # Remove characters that won't be in the ngram database
-        stripped_form = form.replace(",", "").replace("¿", "").replace("?", "")
+        stripped_form = strip_form(form)
         if not stripped_form.strip():
             continue
 
-        yield stripped_form, lemma
+        yield stripped_form, form, lemma
 
 
 def get_search_targets(allforms):
     search_targets = {}
 
-    for form, lemma in iter_form_lemmas(allforms):
+    for stripped_form, form, lemma in iter_form_lemmas(allforms):
 
-        upper_ngram = form.upper()
+        upper_ngram = stripped_form.upper()
         upper_words = upper_ngram.split()
         segments = get_segments(upper_words)
 
@@ -132,9 +136,9 @@ def search_corpus(generator, search_targets):
 
         upper_ngram = ngram.upper()
         if upper_ngram in search_targets:
-            orig_form = ngram
-            search_targets[upper_ngram].append(orig_form)
-            search_results[orig_form] = int(count)
+            orig_ngram = ngram
+            search_targets[upper_ngram].append(orig_ngram)
+            search_results[orig_ngram] = int(count)
             count_matches += 1
 #            if count_matches > 100:
 #                break
@@ -143,17 +147,33 @@ def search_corpus(generator, search_targets):
     return search_results
 
 
-class Lemma():
+class Counter():
     def __init__(self):
         self.ngrams = []
         self.count = 0
 
+def get_counts(allforms, search_results, search_targets):
+
+    form_counts = defaultdict(Counter)
+
+    for stripped_form, form, lemma in iter_form_lemmas(allforms):
+
+        count, matches = get_count_matches(stripped_form, search_targets, search_results)
+        if not count:
+            continue
+
+        form_counts[form].ngrams += matches
+        form_counts[form].count += count
+
+    return form_counts
+
+
 def get_lemma_counts(allforms, search_results, search_targets):
 
-    lemma_counts = defaultdict(Lemma)
+    lemma_counts = defaultdict(Counter)
 
-    for form, lemma in iter_form_lemmas(allforms):
-        count, matches = get_count_matches(form, search_targets, search_results)
+    for stripped_form, form, lemma in iter_form_lemmas(allforms):
+        count, matches = get_count_matches(stripped_form, search_targets, search_results)
         if not count:
             continue
 
@@ -195,6 +215,19 @@ def print_lemma_totals(lemma_counts):
         print(f"{lemma}\t{lemma_count.count}\t{ngram_str}")
 
 
+def print_totals(form_counts):
+
+    for form, form_count in sorted(form_counts.items(), key=lambda x: x[1].count*-1):
+        component_list = []
+        for component, component_count in form_count.ngrams:
+            component_combo = f"{component}:{component_count}"
+            if component_combo not in component_list:
+                component_list.append(component_combo)
+
+        component_str = "; ".join(component_list)
+        print(f"{form}\t{form_count.count}\t{component_str}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Summarize ngram usage")
     parser.add_argument("--allforms", required=True)
@@ -210,10 +243,15 @@ def main():
 
     # Since the ngram data contains a wide range of capitalizations, which may or may not be important to the phrases
     # ex "hasta la fetcha" should match any case variation but "Nuestro Señor" should not match lowercase variations
+    #
+    # Generate case-insensitive targets to count in the ngram corpus
     search_targets = get_search_targets(allforms)
 
     generator = iter_corpus_files(args.ngram) if args.ngram else iter_corpus_db(args.ngramdb)
     search_results = search_corpus(generator, search_targets)
+
+#    form_counts = get_counts(allforms, search_results, search_targets)
+#    print_totals(form_counts)
 
     lemma_counts = get_lemma_counts(allforms, search_results, search_targets)
 
