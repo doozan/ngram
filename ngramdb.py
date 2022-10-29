@@ -5,8 +5,10 @@ class NgramDB():
     def __init__(self, filename):
         assert os.path.isfile(filename)
 
-        self.db = sqlite3.connect(filename)
+        self.db = sqlite3.connect(f"file:{filename}?immutable=1", uri=True)
+        self.db.execute("PRAGMA mmap_size=268435456;")
         self._cursor = self.db.cursor()
+
 
     def __exit__(self, type, value, traceback):
         self.db.close()
