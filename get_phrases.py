@@ -19,7 +19,10 @@ def case_matches(target, match):
     target_words = stripped_target.split()
     match_words = match.split()
 
-    if stripped_target.lower() != match.lower():
+    # use upper() to check matches
+    # "ﬁnal feliz".upper() == "final feliz".upper()
+    # "ﬁnal feliz".lower() != "final feliz".lower()
+    if stripped_target.upper() != match.upper():
         raise ValueError(target, stripped_target.lower(), match.lower())
 
     assert len(target_words) == len(match_words)
