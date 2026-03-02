@@ -2,6 +2,7 @@
 
 import contextlib
 import json
+import re
 import sys
 import smart_open
 
@@ -242,10 +243,15 @@ def open(filename, *args, **nargs):
         yield smart_open.open(filename, *args, **nargs)
 
 
-def summarize_line(line, min_year=0, max_year=0, normalize=False):
-    year_found = not min_year
+def summarize_line(line, years):
+
     items = line.split('\t')
-    total = 0
+
+    totals = [0] * len(years)
+
+    min_year = min(years)
+
+    year_found = False
     for year_item in items[1:]:
         year = int(year_item[:4])
 
@@ -254,36 +260,40 @@ def summarize_line(line, min_year=0, max_year=0, normalize=False):
                 continue
             year_found = True
 
-        if max_year and year > max_year:
-            break
-
         _, use_count, source_count = year_item.split(",")
         use_count = int(use_count)
-        if normalize:
-#            print(items[0], use_count, ngram_yearly_total[year], int(use_count/ngram_yearly_total[year] * 1000000))
-            use_count = int(use_count/ngram_yearly_total[year] * 1000000000)
 
-        total += use_count
+        for idx, summary_year in enumerate(reversed(years)):
+            if year >= summary_year:
+                totals[idx*-1] += use_count
+                break
 
-    return items[0], total
+    return items[0], *totals
 
-def process(infilename, outfilename, min_total=0, min_year=0, limit=0, normalize=False):
+def process(infilename, outfilename):
+
+    years = [1950, 1960, 1970, 1980, 1990, 2000, 2010]
+    limit = 0# 1000
     with open(outfilename, "wt") as outfile:
+        #print("\t".join(["form"] + [f"{y}s" for y in years]), file=outfile)
         with open(infilename, "rt") as fh:
             for count, line in enumerate(fh):
+                if not line.strip():
+                    continue
                 if limit and count > limit:
                     break
-                ngram, total = summarize_line(line, min_year, normalize=normalize)
-                if total > min_total:
-                    outfile.write(f"{ngram}\t{total}\n")
+                res = summarize_line(line, years)
+                if not res:
+                    continue
+                print("\t".join(map(str,res)), file=outfile)
 
 def lambda_handler(event, context):
 
-    process(event["infile"], event["outfile"], event.get("min_total", 0), event.get("min_year", 0), event.get("limit", 0), event.get("normalize"))
+    process(event.get("infile"), event.get("outfile"))
 
     return {
         'statusCode': 200,
-        'body': json.dumps(f'Processed {event["infile"]} -> {event["outfile"]}')
+        'body': json.dumps(f'Processed {event.get("infile")} -> {event.get("outfile")}')
     }
 
 if __name__ == "__main__":
@@ -291,12 +301,8 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Summarize ngram usage")
-    parser.add_argument("infile", help="read data from url")
-    parser.add_argument("--outfile", "-o", help="read data from file")
-    parser.add_argument("--min-year", type=int, help="Ignore usage before the specified year")
-    parser.add_argument("--min-total", type=int, help="Only print entries with at least N uses", default=0)
-    parser.add_argument("--limit", type=int, help="Limit processing to first N entries", default=0)
-    parser.add_argument("--normalize", action='store_true', help="Use normalized yearly data instead of absolute values", default=0)
+    #parser.add_argument("infile", help="read data from url")
+    #parser.add_argument("--outfile", "-o", help="read data from file")
 
     args = parser.parse_args()
 
